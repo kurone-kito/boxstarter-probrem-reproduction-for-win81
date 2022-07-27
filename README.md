@@ -3,6 +3,77 @@
 Reproduce the phenomenon that Boxstarter installation from the web does not
 work correctly on Windows 8.1, using Vagrant.
 
+## TL;DR
+
+1. Run `vagrant up` to create a VM to access the URL:
+   <https://boxstarter.org/package/boxstarter>
+2. After a short wait, The setup will ask permission to run ClickOnce and
+   UAC for Boxstarter installation, which you should follow there.
+3. You can reproduce the problem in a terminal on guest Windows.
+
+![Cannot process argument because the value of argument "type" is not valid. Change the value of the "type" argument and run the operation again. The specified module 'C:\ProgramData\chocolatey\extensions\boxstarter-choco\boxstarter-choco.psm1' as not loaded because no valid module file was found in any module directory.](https://raw.githubusercontent.com/kurone-kito/boxstarter-probrem-reproduction-for-win81/main/screenshot.png)
+
+## Dependencies
+
+- [Vagrant](https://www.vagrantup.com/)
+  - some plugins
+    - [Vagrant Reload Provisioner](https://github.com/aidanns/vagrant-reload)
+    - [vagrant-vbguest](https://github.com/dotless-de/vagrant-vbguest)
+- [VirtualBox](https://www.virtualbox.org/)
+
+## Usage
+
+Setup:
+
+```sh
+vagrant up
+```
+
+Teardown:
+
+```sh
+vagrant destroy -f
+```
+
+### Process
+
+Execute the commands above, and the following processes will be performed
+_entirely automatically except for some exceptional cases_.
+
+1. Vagrant downloads the
+   [jaswsinc/windows81](https://app.vagrantup.com/jaswsinc/boxes/windows81)
+   image (4.21 GB). If a cache exists, it will be used.
+2. Vagrant builds a virtual PC using the above image and Virtualbox.
+3. Start the virtual PC and wait until Windows 8.1 has completed booting.
+   - NOTE: It may wait an excessive amount of time here. It may look like a
+     hang-up, but after a _few minutes of waiting_, it will progress
+     because the service used to communicate between Vagrant and the guest
+     Windows is configured by default to start only upon request.
+4. Install the latest Virtualbox Guest Additions via the Vagrant Reload
+   Provisioner plugin and reboot if necessary.
+   - NOTE: After this reboot, you may have to wait a few minutes for
+     reconnection, as in the previous section. It can remedy in the next
+     step.
+5. Vagrant will initiate a configuration to reproduce the problem that is
+   the subject of this repository.
+   1. Configure the Windows Remote Management (WinRM) service always to
+      start so that it can connect in a short time on subsequent restarts.
+   2. Deploy a batch script to a startup that accesses the
+      <https://boxstarter.org/package/boxstarter> by the browser. It is a
+      roundabout way of getting around that WinRM cannot interfere with
+      the GUI and will run as a background process even if the browser is
+      launched directly.
+   3. Restart the virtual PC. At this point, your Vagrant duties are over,
+      and control will return to the shell, but _you should continue to
+      keep an eye on the behavior of the guest Windows_ running in
+      Virtualbox.
+   4. **`!`** The batch you add to Startup will ask the user for permission to run
+      ClickOnce to launch Boxstarter from the URL, so
+      **you hit the Run button**.
+   5. **`!`** After the download, you will be asked to allow UAC, which
+      **you should do**.
+   6. Boxstarter installation begins and outputs the logs described below.
+
 ## Outputs
 
 Excerpts only where errors occur:
